@@ -1,14 +1,21 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ThemeToggle from "../components/ThemeToggle";
 
 export default function SignIn() {
   const router = useRouter();
+  const { status } = useSession();
   const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/user");
+    }
+  }, [status, router]);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
