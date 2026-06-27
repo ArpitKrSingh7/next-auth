@@ -1,14 +1,9 @@
-"use client";
-import { useEffect } from "react";
-import useGetSession from "../lib/getSession";
-import { useRouter } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "../lib/auth";
 
-export default function User() {
-  const { status, data } = useGetSession();
-  const router = useRouter();
-  useEffect(() => {
-    if (status === "unauthenticated") router.replace("/");
-  }, [router, status]);
-  if (status === "loading") return <div>Loading ...</div>;
-  return <div>welcome {data?.user?.email}</div>;
+export default async function User() {
+  const session = await getServerSession();
+  if (!session?.user) redirect("/");
+  return <div>welcome {session?.user?.email}</div>;
 }
