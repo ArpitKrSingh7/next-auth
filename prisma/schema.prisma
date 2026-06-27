@@ -1,0 +1,58 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id               String    @id @default(cuid())
+
+  // Google OAuth users
+  email            String?   @unique
+  googleId         String?   @unique
+
+  // Credentials-only users
+  credentialsEmail String?   @unique
+
+  // Optional public username
+  username         String?   @unique
+
+  name             String?
+  image            String?
+
+  // Only set for credentials users
+  passwordHash     String?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now()) @updatedAt
+
+  notes            Note[]
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  title     String?
+  content   String   @db.Text
+  priority  Priority @default(MEDIUM)
+  color     String? // Optional hex color, e.g. #fef3c7
+  isPublic  Boolean  @default(false)
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
