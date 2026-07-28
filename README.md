@@ -19,9 +19,13 @@ A simple, fast, and shareable sticky-notes app built with Next.js 15, NextAuth, 
   - Make any note public with one click
   - Public link: `/note/{id}`
   - Private notes return 404 when shared
-- **AI Brief**
+- **AI Brief** *(Premium only)*
   - "Generate Brief" button summarizes all your notes
   - Powered by Groq (`llama-3.1-8b-instant`)
+- **Premium Subscriptions**
+  - Unlimited notes for premium users
+  - Free users are limited to 5 notes
+  - Stripe Checkout + webhooks for activation
 - **Dark Mode**
   - System-aware default
   - Manual toggle, persisted to `localStorage`
@@ -117,6 +121,11 @@ GOOGLE_CLIENT_SECRET="your-google-client-secret"
 
 # Groq API (from https://console.groq.com/keys)
 GROQ_API_KEY="gsk_your_groq_key"
+
+# Stripe (from https://dashboard.stripe.com/apikeys)
+STRIPE_SECRET_KEY="sk_test_your_stripe_secret_key"
+STRIPE_PRICE_ID="price_your_stripe_price_id"
+STRIPE_WEBHOOK_SECRET="whsec_your_webhook_secret"
 ```
 
 #### Generate NEXTAUTH_SECRET
@@ -170,7 +179,10 @@ Open [http://localhost:3000](http://localhost:3000).
 | POST | `/api/notes` | Create a note | Required |
 | PATCH | `/api/notes/[id]` | Update a note (title, content, priority, color, isPublic) | Required |
 | DELETE | `/api/notes/[id]` | Delete a note | Required |
-| POST | `/api/summarize` | Generate AI brief of all notes | Required |
+| POST | `/api/summarize` | Generate AI brief of all notes | Required + Premium |
+| POST | `/api/payment/create-checkout-session` | Start Stripe Checkout | Required |
+| POST | `/api/payment/stripe-webhook` | Stripe webhook events | — |
+| GET | `/api/user` | Get current user's profile | Required |
 
 ---
 
@@ -186,6 +198,10 @@ model User {
   name             String?
   image            String?
   passwordHash     String?             // Credentials only
+  isPremium        Boolean   @default(false)
+  premiumAt        DateTime?
+  stripeCustomerId String?   @unique
+  stripeSubscriptionId String? @unique
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @default(now()) @updatedAt
   notes            Note[]
@@ -261,6 +277,28 @@ enum Priority {
 3. The backend calls Groq's `llama-3.1-8b-instant` model.
 4. A short summary appears in a purple card.
 5. High-priority items are highlighted by the model.
+
+---
+
+## Premium Subscriptions
+
+- Free users can create up to **5 notes**.
+- Premium users can create **unlimited notes**.
+- The **Generate Brief** button is only available for premium users.
+- The **Upgrade** button in the dashboard and on `/checkout` starts a Stripe Checkout session.
+- After a successful payment, Stripe sends a `checkout.session.completed` webhook that marks the user as premium in the database.
+
+### Stripe setup
+
+1. Create a recurring price in the [Stripe Dashboard](https://dashboard.stripe.com/products).
+2. Copy the **Price ID** to `STRIPE_PRICE_ID`.
+3. Add your **Secret key** to `STRIPE_SECRET_KEY`.
+4. For local webhooks, run:
+   ```bash
+   stripe listen --forward-to localhost:3000/api/payment/stripe-webhook
+   ```
+   Copy the generated webhook signing secret to `STRIPE_WEBHOOK_SECRET`.
+5. In production, add the endpoint URL in the Stripe dashboard and copy the signing secret.
 
 ---
 

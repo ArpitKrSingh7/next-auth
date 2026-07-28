@@ -13,14 +13,13 @@ export async function GET() {
   const userExists = await prisma.user.findUnique({
     where: { id: session.user.id },
   });
-
   if (!userExists) {
     return NextResponse.json(
       { error: "User not found. Please sign in again." },
-      { status: 401 }
+      { status: 401 },
     );
   }
-
+  
   const notes = await prisma.note.findMany({
     where: { userId: session.user.id },
     orderBy: {
@@ -45,7 +44,7 @@ export async function POST(req: NextRequest) {
     if (!content || content.trim().length === 0) {
       return NextResponse.json(
         { error: "Note content is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -56,7 +55,7 @@ export async function POST(req: NextRequest) {
     if (!userExists) {
       return NextResponse.json(
         { error: "User not found. Please sign in again." },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -75,7 +74,7 @@ export async function POST(req: NextRequest) {
     console.error("Create note error:", error);
     return NextResponse.json(
       { error: "Failed to create note" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

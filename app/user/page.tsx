@@ -1,9 +1,10 @@
 "use client";
 
 import axios from "axios";
+import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ThemeToggle from "../components/ThemeToggle";
 
 type Priority = "LOW" | "MEDIUM" | "HIGH";
@@ -49,6 +50,9 @@ export default function User() {
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  const [isPremium, setIsPremium] = useState(false);
+  const [isPremiumLoading, setIsPremiumLoading] = useState(true);
+
   const [summary, setSummary] = useState("");
   const [summaryLoading, setSummaryLoading] = useState(false);
 
@@ -61,6 +65,30 @@ export default function User() {
     priority: "MEDIUM" as Priority,
     color: "",
   });
+
+  const fetchNotes = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get("/api/notes");
+      setNotes(res.data.notes);
+    } catch {
+      setError("Failed to load notes");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchUser = useCallback(async () => {
+    try {
+      setIsPremiumLoading(true);
+      const res = await axios.get("/api/user");
+      setIsPremium(res.data.user.isPremium);
+    } catch {
+      setIsPremium(false);
+    } finally {
+      setIsPremiumLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -76,20 +104,9 @@ export default function User() {
         return;
       }
       fetchNotes();
+      fetchUser();
     }
-  }, [status, session, router]);
-
-  const fetchNotes = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get("/api/notes");
-      setNotes(res.data.notes);
-    } catch (err) {
-      setError("Failed to load notes");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [status, session, router, fetchNotes, fetchUser]);
 
   const openCreateModal = () => {
     setEditingNote(null);
@@ -209,6 +226,18 @@ export default function User() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {isPremiumLoading ? null : isPremium ? (
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                Premium
+              </span>
+            ) : (
+              <Link
+                href="/checkout"
+                className="text-xs font-semibold px-3 py-1.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
+              >
+                Upgrade
+              </Link>
+            )}
             <ThemeToggle />
             <button
               onClick={() => signOut({ callbackUrl: "/signin" })}
@@ -227,12 +256,36 @@ export default function User() {
           </div>
         )}
 
+        {!isPremiumLoading && !isPremium && (
+          <div className="mb-6 p-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-300">
+                Free plan
+              </h2>
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                You are limited to 5 notes. Upgrade to premium for unlimited notes and AI summaries.
+              </p>
+            </div>
+            <Link
+              href="/checkout"
+              className="shrink-0 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 transition-colors"
+            >
+              Upgrade
+            </Link>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-6">
           <p className="text-zinc-600 dark:text-zinc-400">
             {notes.length} {notes.length === 1 ? "note" : "notes"}
+            {!isPremiumLoading && !isPremium && (
+              <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-500">
+                ({Math.min(notes.length, 5)}/5 free)
+              </span>
+            )}
           </p>
           <div className="flex items-center gap-3">
-            {notes.length > 0 && (
+            {isPremium && notes.length > 0 && (
               <button
                 onClick={handleSummarize}
                 disabled={summaryLoading}
