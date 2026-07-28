@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import axios from "axios";
 
@@ -11,6 +11,15 @@ function CheckoutContent() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isSuccess) {
+      const timer = setTimeout(() => {
+        window.location.href = "/user";
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [isSuccess]);
 
   async function handleCheckout() {
     try {
@@ -44,7 +53,8 @@ function CheckoutContent() {
 
         {isSuccess && (
           <div className="mb-6 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 text-sm">
-            Payment successful! Premium has been added to your account.
+            <p>Payment successful! Premium has been added to your account.</p>
+            <p className="mt-1 text-xs opacity-80">Redirecting to your notes...</p>
           </div>
         )}
 
